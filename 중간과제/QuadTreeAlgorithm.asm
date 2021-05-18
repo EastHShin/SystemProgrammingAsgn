@@ -1,0 +1,300 @@
+MAIN	START	0
+
+
+	JSUB	RDSIZE
+	JSUB	RDARR
+
+	JSUB	stinit
+	LDA	SIZE
+	LDS	ZERO
+	LDT	ZERO
+	JSUB	QUAD	
+	LDX	ZERO
+	J	PRINT
+
+SIZE	RESW	1
+ARR	RESW	4096
+ZERO	WORD	0
+
+
+RDSIZE	LDX	ZERO
+	LDA	ZERO
+SZLOOP	TD	INPUT
+	JEQ	RDSIZE
+	RD	INPUT
+	SUB	DIFFAS
+	STA	SIZE
+	RSUB
+
+RDARR	LDX	ZERO
+	LDS	WSIZE
+	LDA	SIZE
+	MUL	SIZE
+	MUL	WSIZE
+	RMO	A, T
+ARLOOP	LDA	ZERO
+	TD	INPUT
+	JEQ	RDARR
+	RD	INPUT
+	COMP	ENTER
+	JEQ	ARLOOP
+	SUB	DIFFAS
+	STA	ARR,X
+	ADDR	S, X
+	COMPR	X, T
+	JLT	ARLOOP
+	RSUB
+
+QUAD	
+	STA	tmpSZ
+	STS	tmpR
+	STT	tmpC
+	STL	tmpL
+
+	JSUB	push	. push size
+	LDA	tmpR
+	STA	Roidx
+	JSUB	push	. push Row
+	LDA	tmpC	
+	JSUB	push	. push Col
+	LDA	tmpL	
+	JSUB	push	. push L
+
+	LDA	ONE
+	STA	Cidx
+	LDA	tmpR
+	ADD	tmpSZ
+	SUB	ONE
+	MUL	WSIZE
+	MUL	SIZE
+	STA	TMP
+	LDA	tmpC
+	ADD	tmpSZ
+	SUB	ONE
+	MUL	WSIZE
+	ADD	TMP	.(ROW+tmpSZ-1)*(WSIZE*SIZE) + (COL+tmpSZ-1) * WSIZE
+	RMO	A,T
+	
+
+	LDA	tmpR
+	MUL	WSIZE
+	MUL	SIZE
+	STA	COMV
+	LDA	tmpC	.COL
+	MUL	WSIZE	.COL * WSIZE
+	ADD	COMV	.ROW*(WSIZE*SIZE) + COL*WSIZE
+	RMO	A,X
+	LDA	ARR,X
+	STA	COMV	.COMV = ARR[row][col]
+
+	LDS	WSIZE
+FLOOP	LDA	ARR,X
+	COMP	COMV
+	JEQ	SAME
+	J	NSAME
+SAME	LDA	Cidx
+	COMP	tmpSZ
+	JEQ	CNGROW
+	JLT	CNGCOL
+CNGCOL	LDA	Cidx
+	ADD	ONE
+	STA	Cidx
+	ADDR	S,X	.
+	J	COMPA
+CNGROW	LDA	ONE
+	STA	Cidx
+	LDA	Roidx
+	ADD	ONE
+	STA	Roidx
+	MUL	WSIZE
+	MUL	SIZE
+	STA	TMP
+	LDA	tmpC
+	MUL	WSIZE
+	ADD	TMP
+	RMO	A,X
+COMPA	COMPR	X,T	.
+	LDA	ONE
+	STA	bool
+	JLT	FLOOP
+	JEQ	FLOOP
+	JGT	FSTOP
+NSAME	LDA	ZERO
+	STA	bool
+FSTOP
+	LDA	bool
+	COMP	false
+	JEQ	ELSE
+	LDX	Ridx
+	LDA	COMV
+	STCH	result,X
+	LDA	Ridx
+	ADD	ONE
+	STA	Ridx
+	JSUB	pop
+	STA	Lreg
+	JSUB	pop
+	JSUB	pop
+	JSUB	pop
+	LDL	Lreg
+	RSUB
+ELSE	LDX	Ridx
+	LDA	LBRAC		. append "("
+	STCH	result,X
+	LDA	Ridx
+	ADD	ONE
+	STA	Ridx
+
+	LDA	tmpSZ
+	DIV	half
+	LDS	tmpR
+	LDT	tmpC
+	JSUB	QUAD
+	
+	JSUB	pop	.start
+	STA	tmpL
+	JSUB	pop
+	STA	tmpC
+	JSUB	pop
+	STA	tmpR
+	JSUB	pop
+	STA	tmpSZ
+	
+	JSUB	push
+	LDA	tmpR
+	JSUB	push
+	LDA	tmpC
+	JSUB	push
+	LDA	tmpL
+	JSUB	push	.end
+
+	LDA	tmpSZ
+	DIV	half
+	LDT	tmpC
+	ADDR	A,T
+	LDS	tmpR
+	JSUB	QUAD
+
+	JSUB	pop	.s
+	STA	tmpL
+	JSUB	pop
+	STA	tmpC
+	JSUB	pop
+	STA	tmpR
+	JSUB	pop
+	STA	tmpSZ
+	
+	JSUB	push
+	LDA	tmpR
+	JSUB	push
+	LDA	tmpC
+	JSUB	push
+	LDA	tmpL
+	JSUB	push	.e
+
+	LDA	tmpSZ
+	DIV	half
+	LDS	tmpR
+	ADDR	A,S
+	LDT	tmpC
+	JSUB	QUAD
+
+	JSUB	pop	.S
+	STA	tmpL
+	JSUB	pop
+	STA	tmpC
+	JSUB	pop
+	STA	tmpR
+	JSUB	pop
+	STA	tmpSZ
+	
+	JSUB	push
+	LDA	tmpR
+	JSUB	push
+	LDA	tmpC
+	JSUB	push
+	LDA	tmpL
+	JSUB	push	.E
+
+	LDA	tmpSZ
+	DIV	half
+	LDS	tmpR
+	ADDR	A,S
+	LDT	tmpC
+	ADDR	A,T
+	JSUB	QUAD
+
+	LDX	Ridx
+	LDA	RBRAC		. append ")"
+	STCH	result,X
+	LDA	Ridx
+	ADD	ONE
+	STA	Ridx
+
+	JSUB	pop
+	STA	Lreg
+	JSUB	pop
+	RMO	A,T
+	JSUB	pop
+	RMO	A,S
+	JSUB	pop
+	LDL	Lreg
+	RSUB
+
+PRINT	TD	OUTPUT
+	JEQ	PRINT
+	LDCH	result,X
+	COMP	RBRAC
+	JEQ	PR
+	COMP	LBRAC
+	JEQ	PR
+	ADD	DIFFAS
+PR	WD	OUTPUT
+	TIX	Ridx
+	JLT	PRINT
+	J	exit
+
+
+stinit  LDA	#gap
+	STA 	stackp    
+	RSUB
+push    STA @stackp   
+	LDA stackp
+	ADD #3
+	STA stackp
+	RSUB
+pop     LDA stackp   
+	SUB #3
+	STA stackp
+	LDA @stackp
+	RSUB
+
+exit	ADD	ZERO
+
+stackp RESW 1     
+
+
+tmpR	RESW	1
+tmpC	RESW	1
+tmpL	RESW	1
+tmpSZ	RESW	1
+INPUT	BYTE	0
+OUTPUT	BYTE	1
+WSIZE	WORD	3
+ENTER	WORD	10
+DIFFAS	WORD	48
+COMV	RESW	1
+gap	RESW	32
+TMP	RESW	1
+bool	WORD	1
+true	WORD	1
+false	WORD	0
+result	RESB	4096
+Ridx	WORD	0
+ONE	WORD	1
+LBRAC	WORD	40
+RBRAC	WORD	41
+half	WORD	2
+Lreg	RESW	1
+Cidx	RESW	1
+Roidx	RESW	1
